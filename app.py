@@ -8,14 +8,14 @@ from tkinter import filedialog, messagebox
 from PIL import Image
 from skimage.measure import shannon_entropy
 
-# -------- PATHS --------
+# ---------- PATHS ----------
 MODEL_PATH = r"A:\MY project\v3\models\svm_wavelet_bior13.pkl"
 SCALER_PATH = r"A:\MY project\v3\models\scaler.pkl"
 
 IMG_SIZE = 128
 WAVELET = 'bior1.3'
 
-# -------- Feature Extraction --------
+# ---------- FEATURE EXTRACTION ----------
 def extract_features(path):
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     if img is None:
@@ -30,24 +30,29 @@ def extract_features(path):
     features = []
     for b in bands:
         b = np.nan_to_num(b)
-        features.append(np.mean(b))
-        features.append(np.std(b))
-        features.append(np.sum(b**2) / b.size)
-        features.append(shannon_entropy(np.abs(b)))
+        features.extend([
+            np.mean(b),
+            np.std(b),
+            np.sum(b**2) / b.size,
+            shannon_entropy(np.abs(b))
+        ])
 
     return np.array(features).reshape(1, -1)
 
-# -------- GUI --------
+# ---------- GUI ----------
 class PlantApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
 
-        self.title("Plant Health AI System")
-        self.geometry("600x750")
+        # DARK MODE
         ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
 
-        # تحميل النموذج
+        self.title("Plant Health AI")
+        self.geometry("620x720")
+        self.configure(fg_color="#0D1117")  # خلفية داكنة جداً
+
         if not os.path.exists(MODEL_PATH):
             messagebox.showerror("Error", "Model not found")
             self.destroy()
@@ -56,24 +61,27 @@ class PlantApp(ctk.CTk):
         self.model = joblib.load(MODEL_PATH)
         self.scaler = joblib.load(SCALER_PATH)
 
-        self.setup_gui()
+        self.setup_ui()
 
-    def setup_gui(self):
+    def setup_ui(self):
 
         ctk.CTkLabel(
             self,
             text="Plant Health Diagnostic",
-            font=("Arial", 28, "bold"),
-            text_color="#81C784"
-        ).pack(pady=30)
+            font=("Segoe UI", 28, "bold"),
+            text_color="#58A6FF"
+        ).pack(pady=25)
 
         self.btn = ctk.CTkButton(
             self,
-            text="Select Plant Image",
+            text="Select Leaf Image",
             command=self.predict,
             height=45,
-            width=200,
-            font=("Arial", 16, "bold")
+            width=220,
+            corner_radius=12,
+            fg_color="#238636",
+            hover_color="#2EA043",
+            font=("Segoe UI", 16, "bold")
         )
         self.btn.pack(pady=10)
 
@@ -82,29 +90,38 @@ class PlantApp(ctk.CTk):
             text="No image selected",
             width=420,
             height=320,
-            fg_color="#1E1E1E",
-            corner_radius=15
+            fg_color="#161B22",
+            corner_radius=15,
+            text_color="#8B949E"
         )
         self.canvas.pack(pady=20)
 
-        self.card = ctk.CTkFrame(self, fg_color="#2B2B2B", corner_radius=15)
-        self.card.pack(fill="x", padx=60, pady=20)
+        self.card = ctk.CTkFrame(
+            self,
+            fg_color="#161B22",
+            corner_radius=15,
+            border_width=1,
+            border_color="#30363D"
+        )
+        self.card.pack(fill="x", padx=60, pady=15)
 
-        self.res_txt = ctk.CTkLabel(
+        self.result_label = ctk.CTkLabel(
             self.card,
             text="Status: Ready",
-            font=("Arial", 22, "bold")
+            font=("Segoe UI", 22, "bold"),
+            text_color="#C9D1D9"
         )
-        self.res_txt.pack(pady=15)
+        self.result_label.pack(pady=15)
 
-        self.conf_txt = ctk.CTkLabel(
+        self.conf_label = ctk.CTkLabel(
             self.card,
             text="Confidence: 0%",
-            font=("Arial", 14)
+            font=("Segoe UI", 14),
+            text_color="#8B949E"
         )
-        self.conf_txt.pack(pady=(0, 15))
+        self.conf_label.pack(pady=(0, 15))
 
-    # -------- Prediction --------
+    # ---------- Prediction ----------
     def predict(self):
         path = filedialog.askopenfilename(
             filetypes=[("Image files", "*.jpg *.png *.jpeg")]
@@ -113,7 +130,6 @@ class PlantApp(ctk.CTk):
             return
 
         try:
-            # عرض الصورة
             img = Image.open(path)
             self.tk_img = ctk.CTkImage(img, size=(400, 300))
             self.canvas.configure(image=self.tk_img, text="")
@@ -130,18 +146,18 @@ class PlantApp(ctk.CTk):
 
             if pred == 0:
                 result = "HEALTHY"
-                color = "#66BB6A"
+                color = "#2EA043"
             else:
                 result = "DISEASED"
-                color = "#EF5350"
+                color = "#F85149"
 
-            self.res_txt.configure(
+            self.result_label.configure(
                 text=f"Result: {result}",
                 text_color=color
             )
 
-            self.conf_txt.configure(
-                text=f"Confidence Score: {prob*100:.2f}%"
+            self.conf_label.configure(
+                text=f"Confidence: {prob*100:.2f}%"
             )
 
         except Exception as e:
