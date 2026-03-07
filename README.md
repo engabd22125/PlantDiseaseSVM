@@ -1,4 +1,4 @@
-# PlantDiseaseSVM — Project overview and detailed function reference (English)
+# PlantDiseaseSVM — Project overview and 
 
 This repository implements a classical image-processing pipeline for plant disease classification using handcrafted texture features (Local Binary Patterns and Wavelet sub-band statistics) and Support Vector Machines (SVM). The README starts by describing the preprocessing stage in detail (as requested) and then covers feature extraction, training, inference, repository layout, and operational notes.
 
