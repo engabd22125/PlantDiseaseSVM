@@ -1,131 +1,92 @@
 import sys
-sys.stdout.reconfigure(encoding='utf-8')  # لتجنب مشاكل الترميز في ويندوز
+sys.stdout.reconfigure(encoding='utf-8')
 
 import os
 import shutil
-import threading
-import random
 from tqdm import tqdm
+from collections import defaultdict
 
-# --- Paths ---
-DATASET_SOURCE = r'A:\MY project\v3\dataset'
-OUTPUT_FOLDER = r'A:\MY project\v3\Organized_Data'
+# ================= CONFIG =================
+DATASET_SOURCE = r'A:\F_PROJECT\Dataset'
+OUTPUT_FOLDER = r'A:\MY project\v3\org_dataset'
+# ==========================================
 
-MAX_PER_CLASS = 15000
+# هيكل البيانات: { "apple": {"healthy": [paths], "diseased": [paths]}, "corn": {...} }
+plant_data = defaultdict(lambda: {"healthy": [], "diseased": []})
 
-lock = threading.Lock()
-
-collected = {
-    "healthy": [],
-    "diseased": [],
-    "unknown": []
-}
-
-def classify_folder(folder_name):
-    name = folder_name.lower()
+def classify_by_name(path_string):
+    name = path_string.lower()
     if "healthy" in name:
         return "healthy"
-    elif any(d in name for d in ["spot","blight","rust","scab","virus","mold","rot","diseased"]):
+    
+    disease_keywords = ["spot", "blight", "rust", "scab", "virus", "mold", "rot", "diseased", "septoria", "mite"]
+    if any(d in name for d in disease_keywords):
         return "diseased"
-    else:
-        return "unknown"
+    return None
 
-def collect_images_from_folder(path, prefix):
-    images = [f for f in os.listdir(path)
-              if f.lower().endswith(('.png','.jpg','.jpeg'))]
+def extract_plant_name(folder_path):
+    name = os.path.basename(folder_path).lower()
+    # تنظيف الاسم للحصول على نوع النبات فقط
+    if "___" in name: name = name.split("___")[0]
+    elif "_" in name: name = name.split("_")[0]
+    return name
 
-    for img in images:
-        full = os.path.join(path, img)
-        category = classify_folder(os.path.basename(path))
+def scan_and_group():
+    print(f"🔍 جاري فحص المجلدات في: {DATASET_SOURCE}")
+    
+    for root, _, files in os.walk(DATASET_SOURCE):
+        category = classify_by_name(root)
+        if category:
+            plant_name = extract_plant_name(root)
+            for file in files:
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    full_path = os.path.join(root, file)
+                    plant_data[plant_name][category].append(full_path)
 
-        with lock:
-            collected[category].append((full, f"{prefix}_{img}"))
+    print(f"✅ تم العثور على {len(plant_data)} أنواع من النباتات.\n")
 
-def process_standard_modalities():
-    modes = ['color','segmented','grayscale']
-    print("Thread 1 → scanning standard folders...")
+def process_and_balance():
+    if os.path.exists(OUTPUT_FOLDER):
+        shutil.rmtree(OUTPUT_FOLDER)
+    
+    os.makedirs(os.path.join(OUTPUT_FOLDER, "healthy"), exist_ok=True)
+    os.makedirs(os.path.join(OUTPUT_FOLDER, "diseased"), exist_ok=True)
 
-    for mode in modes:
-        mode_path = os.path.join(DATASET_SOURCE, mode)
-        if not os.path.exists(mode_path):
+    total_copied = {"healthy": 0, "diseased": 0}
+
+    for plant, categories in plant_data.items():
+        h_list = categories["healthy"]
+        d_list = categories["diseased"]
+
+        h_count = len(h_list)
+        d_count = len(d_list)
+
+        if h_count == 0 or d_count == 0:
+            print(f"⚠️ تخطي {plant}: ينقصه أحد التصنيفين (سليم:{h_count}, مصاب:{d_count})")
             continue
 
-        for sub in os.listdir(mode_path):
-            sub_path = os.path.join(mode_path, sub)
-            if os.path.isdir(sub_path):
-                collect_images_from_folder(sub_path, f"STD_{mode}_{sub}")
+        # التوازن لكل نبات: نأخذ العدد الأقل بين سليم ومصاب لهذا النبات تحديداً
+        target_for_this_plant = min(h_count, d_count)
+        
+        print(f"🌿 معالجة {plant.upper()}: سيتم أخذ {target_for_this_plant} صورة لكل حالة.")
 
-    print("Thread 1 finished")
-
-def process_other_folders():
-    modes = ['color','segmented','grayscale']
-    print("Thread 2 => scanning other folders...")
-
-    for item in os.listdir(DATASET_SOURCE):
-        item_path = os.path.join(DATASET_SOURCE, item)
-
-        if item in modes or not os.path.isdir(item_path):
-            continue
-
-        collect_images_from_folder(item_path, f"OTHER_{item}")
-
-    print("Thread 2 finished")
-
-def balance_and_copy():
-    print("\nBalancing dataset...")
-
-    healthy_count = len(collected["healthy"])
-    diseased_count = len(collected["diseased"])
-
-    print(f"Healthy found  : {healthy_count}")
-    print(f"Diseased found : {diseased_count}")
-
-    if healthy_count == 0 or diseased_count == 0:
-        print("ERROR: one class is empty!")
-        return
-
-    target_count = min(healthy_count, diseased_count, MAX_PER_CLASS)
-    print(f"Balanced count per class: {target_count}")
-
-    for category in ["healthy","diseased"]:
-        dest = os.path.join(OUTPUT_FOLDER, category)
-        os.makedirs(dest, exist_ok=True)
-
-        random.shuffle(collected[category])
-        selected = collected[category][:target_count]
-
-        for src, name in tqdm(selected, desc=f"Copying {category}"):
-            try:
-                # منع تكرار الأسماء
-                dst = os.path.join(dest, name)
-                if os.path.exists(dst):
-                    base, ext = os.path.splitext(name)
-                    dst = os.path.join(dest, base + "_dup" + ext)
-
-                shutil.copy2(src, dst)
-
-            except Exception as e:
-                print("Copy error:", e)
-
-def run_system():
-    for cat in ['healthy','diseased']:
-        os.makedirs(os.path.join(OUTPUT_FOLDER, cat), exist_ok=True)
-
-    t1 = threading.Thread(target=process_standard_modalities)
-    t2 = threading.Thread(target=process_other_folders)
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-    balance_and_copy()
+        for cat in ["healthy", "diseased"]:
+            selected_images = categories[cat][:target_for_this_plant]
+            dest_dir = os.path.join(OUTPUT_FOLDER, cat)
+            
+            for i, src in enumerate(selected_images):
+                # تسمية فريدة: plant_category_index.jpg
+                new_name = f"{plant}_{cat}_{i+1}.jpg"
+                shutil.copy2(src, os.path.join(dest_dir, new_name))
+                total_copied[cat] += 1
 
     print("\n" + "="*50)
-    print("DONE  Balanced dataset ready")
-    print("Saved in:", OUTPUT_FOLDER)
+    print(f"🎉 انتهت العملية بنجاح!")
+    print(f"📁 إجمالي الصور السليمة: {total_copied['healthy']}")
+    print(f"📁 إجمالي الصور المصابة: {total_copied['diseased']}")
+    print(f"📍 الموقع: {OUTPUT_FOLDER}")
     print("="*50)
 
 if __name__ == "__main__":
-    run_system()
+    scan_and_group()
+    process_and_balance()

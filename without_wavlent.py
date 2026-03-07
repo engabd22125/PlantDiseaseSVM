@@ -12,7 +12,7 @@ from tqdm import tqdm
 import time  # لحساب الوقت لكل صورة
 
 # ---------------- Settings ----------------
-DATASET = r"A:\MY project\v3\Organized_Data"
+DATASET = r"A:\MY project\v3\org_dataset"
 MODEL_DIR = r"A:\MY project\v3\models"
 CSV_PATH = r"A:\MY project\v3\lbp_features.csv"
 
@@ -102,4 +102,4 @@ print(f"\nTime per image (s): {time_per_image:.6f}")
 # ---------------- Save Model ----------------
 joblib.dump(model, os.path.join(MODEL_DIR, "svm_lbp.pkl"))
 joblib.dump(scaler, os.path.join(MODEL_DIR, "scaler_ww.pkl"))
-print(f"\nModel saved → {MODEL_DIR}")
+print(f"\nModel saved -> {MODEL_DIR}")

@@ -13,7 +13,7 @@ from tqdm import tqdm
 import time  
 
 # ---------------- Settings ----------------
-DATASET = r"A:\MY project\v3\Organized_Data"
+DATASET = r"A:\MY project\v3\org_dataset"
 MODEL_DIR = r"A:\MY project\v3\models"
 CSV_PATH = r"A:\MY project\v3\wavelet_features.csv"
 

@@ -1,30 +1,28 @@
-svm with  Wavelet
+
+with out Wavelet 
+
 ====== RESULTS ======
-Accuracy      : 0.8355
-Precision     : 0.8250
-Recall        : 0.8517
-F1-Score      : 0.8381
+Accuracy       : 0.8169
+Precision      : 0.8004
+Recall         : 0.8441
+F1-Score       : 0.8217
+Time per image (s): 0.000251
+Confusion Matrix:
+[[1044  278]
+ [ 206 1115]]
+
+
+ ------------------
+
+
+ ====== RESULTS ======
+Accuracy      : 0.8948
+Precision     : 0.8901
+Recall        : 0.9008
+F1-Score      : 0.8954
 
 Confusion Matrix:
-[[2458  542]
- [ 445 2555]]
+[[1175  147]
+ [ 131 1190]]
 
-Time per image (s): 0.000539
-
-
- -----
-
- without Wavelet :
-
- 
-====== RESULTS ======
-Accuracy  : 0.7735
-Precision : 0.7716
-Recall    : 0.7770
-F1-Score  : 0.7743
-
-Confusion Matrix:
-[[2310  690]
- [ 669 2331]]
-
- Time per image (s): 0.000684
+Time per image (s): 0.000173
