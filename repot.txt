@@ -13,7 +13,7 @@ Confusion Matrix:
 
 
  ------------------
-
+with Wavelet 1level 
 
  ====== RESULTS ======
 Accuracy      : 0.8948
@@ -26,3 +26,16 @@ Confusion Matrix:
  [ 131 1190]]
 
 Time per image (s): 0.000173
+with Wavelet 2level 
+
+====== RESULTS ======
+Accuracy      : 0.9012
+Precision     : 0.9027
+Recall        : 0.8993
+F1-Score      : 0.9010
+
+Confusion Matrix:
+[[1194  128]
+ [ 133 1188]]
+
+Time per image (s): 0.000212
